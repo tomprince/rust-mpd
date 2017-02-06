@@ -3,6 +3,7 @@
 use convert::FromIter;
 
 use error::{Error, ParseError};
+use serde_helpers::serialize_external;
 
 use std::collections::BTreeMap;
 use std::fmt;
@@ -32,9 +33,9 @@ pub struct QueuePlace {
 
 /// Song range
 #[derive(Debug, Copy, Clone, PartialEq, Serialize)]
-pub struct Range(#[serde(serialize_with="::serde_helpers::serialize_duration")]
+pub struct Range(#[serde(serialize_with="serialize_external")]
                  pub Duration,
-                 #[serde(serialize_with="::serde_helpers::serialize_option_duration")]
+                 #[serde(serialize_with="serialize_external")]
                  pub Option<Duration>);
 
 
@@ -78,10 +79,10 @@ pub struct Song {
     /// title
     pub title: Option<String>,
     /// last modification time
-    #[serde(serialize_with="::serde_helpers::serialize_option_tm")]
+    #[serde(serialize_with="serialize_external")]
     pub last_mod: Option<Tm>,
     /// duration (in seconds resolution)
-    #[serde(serialize_with="::serde_helpers::serialize_option_duration")]
+    #[serde(serialize_with="serialize_external")]
     pub duration: Option<Duration>,
     /// place in the queue (if queued for playback)
     pub place: Option<QueuePlace>,

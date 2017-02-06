@@ -1,8 +1,9 @@
 //! The module defines MPD status data structures
 
 use convert::FromIter;
-
 use error::{Error, ParseError};
+
+use serde_helpers::serialize_external;
 use song::{Id, QueuePlace};
 use std::fmt;
 use std::str::FromStr;
@@ -33,23 +34,23 @@ pub struct Status {
     /// next song to play place in the queue
     pub nextsong: Option<QueuePlace>,
     /// time current song played, and total song duration (in seconds resolution)
-    #[serde(serialize_with="::serde_helpers::serialize_option_pair_duration")]
+    #[serde(serialize_with="serialize_external")]
     pub time: Option<(Duration, Duration)>,
     /// elapsed play time current song played (in milliseconds resolution)
-    #[serde(serialize_with="::serde_helpers::serialize_option_duration")]
+    #[serde(serialize_with="serialize_external")]
     pub elapsed: Option<Duration>,
     /// current song duration
-    #[serde(serialize_with="::serde_helpers::serialize_option_duration")]
+    #[serde(serialize_with="serialize_external")]
     pub duration: Option<Duration>,
     /// current song bitrate, kbps
     pub bitrate: Option<u32>,
     /// crossfade timeout, seconds
-    #[serde(serialize_with="::serde_helpers::serialize_option_duration")]
+    #[serde(serialize_with="serialize_external")]
     pub crossfade: Option<Duration>,
     /// mixramp threshold, dB
     pub mixrampdb: f32,
     /// mixramp duration, seconds
-    #[serde(serialize_with="::serde_helpers::serialize_option_duration")]
+    #[serde(serialize_with="serialize_external")]
     pub mixrampdelay: Option<Duration>,
     /// current audio playback format
     pub audio: Option<AudioFormat>,
