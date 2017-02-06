@@ -3,7 +3,6 @@
 use convert::FromIter;
 
 use error::{Error, ParseError};
-use serde::{Serialize, Serializer, Deserialize, Deserializer};
 
 use std::collections::BTreeMap;
 use std::fmt;
@@ -11,20 +10,8 @@ use std::str::FromStr;
 use time::{Duration, Tm, strptime};
 
 /// Song ID
-#[derive(Debug, Copy, Clone, PartialEq, PartialOrd, Eq, Ord, Default)]
+#[derive(Debug, Copy, Clone, PartialEq, PartialOrd, Eq, Ord, Default, Serialize, Deserialize)]
 pub struct Id(pub u32);
-
-impl Serialize for Id {
-    fn serialize<S: Serializer>(&self, e: S) -> Result<S::Ok, S::Error> {
-        self.0.serialize(e)
-    }
-}
-
-impl Deserialize for Id {
-    fn deserialize<S: Deserializer>(d: S) -> Result<Id, S::Error> {
-        Deserialize::deserialize(d).map(Id)
-    }
-}
 
 impl fmt::Display for Id {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -45,9 +32,9 @@ pub struct QueuePlace {
 
 /// Song range
 #[derive(Debug, Copy, Clone, PartialEq, Serialize)]
-pub struct Range(#[serde(serialize_with="serialize_duration")]
+pub struct Range(#[serde(serialize_with="::serde_helpers::serialize_duration")]
                  pub Duration,
-                 #[serde(serialize_with="serialize_option_duration")]
+                 #[serde(serialize_with="::serde_helpers::serialize_option_duration")]
                  pub Option<Duration>);
 
 
@@ -81,18 +68,6 @@ impl FromStr for Range {
     }
 }
 
-fn serialize_option_tm<S: Serializer>(time: &Option<Tm>, s: S) -> Result<S::Ok, S::Error> {
-    time.map(|time| time.to_timespec().sec).serialize(s)
-}
-
-fn serialize_duration<S: Serializer>(duration: &Duration, s: S) -> Result<S::Ok, S::Error> {
-    duration.num_seconds().serialize(s)
-}
-
-pub fn serialize_option_duration<S: Serializer>(duration: &Option<Duration>, s: S) -> Result<S::Ok, S::Error> {
-    duration.map(|d| d.num_seconds()).serialize(s)
-}
-
 /// Song data
 #[derive(Debug, Clone, PartialEq, Default, Serialize)]
 pub struct Song {
@@ -103,10 +78,10 @@ pub struct Song {
     /// title
     pub title: Option<String>,
     /// last modification time
-    #[serde(serialize_with="serialize_option_tm")]
+    #[serde(serialize_with="::serde_helpers::serialize_option_tm")]
     pub last_mod: Option<Tm>,
     /// duration (in seconds resolution)
-    #[serde(serialize_with="serialize_option_duration")]
+    #[serde(serialize_with="::serde_helpers::serialize_option_duration")]
     pub duration: Option<Duration>,
     /// place in the queue (if queued for playback)
     pub place: Option<QueuePlace>,

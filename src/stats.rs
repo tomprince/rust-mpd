@@ -3,7 +3,6 @@
 use convert::FromIter;
 
 use error::Error;
-use serde::{Serialize, Serializer};
 use time::{Duration, Timespec};
 
 /// DB and playback statistics

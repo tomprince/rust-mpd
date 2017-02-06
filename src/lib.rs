@@ -55,6 +55,7 @@ pub mod idle;
 pub mod mount;
 
 mod proto;
+mod serde_helpers;
 pub mod client;
 
 pub use client::Client;

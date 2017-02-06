@@ -3,17 +3,11 @@
 use convert::FromIter;
 
 use error::{Error, ParseError};
-use serde::{Serialize, Serializer};
-use serde::ser::SerializeStruct;
 use song::{Id, QueuePlace};
 use std::fmt;
 use std::str::FromStr;
 use time::Duration;
 
-
-pub fn serialize_option_pair_duration<S: Serializer>(duration: &Option<(Duration, Duration)>, s: S) -> Result<S::Ok, S::Error> {
-    duration.map(|(c, t)| (c.num_seconds(), t.num_seconds())).serialize(s)
-}
 
 /// MPD status
 #[derive(Debug, PartialEq, Clone, Default, Serialize)]
@@ -39,23 +33,23 @@ pub struct Status {
     /// next song to play place in the queue
     pub nextsong: Option<QueuePlace>,
     /// time current song played, and total song duration (in seconds resolution)
-    #[serde(serialize_with="serialize_option_pair_duration")]
+    #[serde(serialize_with="::serde_helpers::serialize_option_pair_duration")]
     pub time: Option<(Duration, Duration)>,
     /// elapsed play time current song played (in milliseconds resolution)
-    #[serde(serialize_with="::song::serialize_option_duration")]
+    #[serde(serialize_with="::serde_helpers::serialize_option_duration")]
     pub elapsed: Option<Duration>,
     /// current song duration
-    #[serde(serialize_with="::song::serialize_option_duration")]
+    #[serde(serialize_with="::serde_helpers::serialize_option_duration")]
     pub duration: Option<Duration>,
     /// current song bitrate, kbps
     pub bitrate: Option<u32>,
     /// crossfade timeout, seconds
-    #[serde(serialize_with="::song::serialize_option_duration")]
+    #[serde(serialize_with="::serde_helpers::serialize_option_duration")]
     pub crossfade: Option<Duration>,
     /// mixramp threshold, dB
     pub mixrampdb: f32,
     /// mixramp duration, seconds
-    #[serde(serialize_with="::song::serialize_option_duration")]
+    #[serde(serialize_with="::serde_helpers::serialize_option_duration")]
     pub mixrampdelay: Option<Duration>,
     /// current audio playback format
     pub audio: Option<AudioFormat>,
