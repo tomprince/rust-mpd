@@ -3,7 +3,7 @@
 use convert::FromIter;
 
 use error::{Error, ParseError};
-use rustc_serialize::{Decodable, Decoder, Encodable, Encoder};
+use serde::{Serialize, Serializer, Deserialize, Deserializer};
 
 use std::collections::BTreeMap;
 use std::fmt;
@@ -14,15 +14,15 @@ use time::{Duration, Tm, strptime};
 #[derive(Debug, Copy, Clone, PartialEq, PartialOrd, Eq, Ord, Default)]
 pub struct Id(pub u32);
 
-impl Encodable for Id {
-    fn encode<S: Encoder>(&self, e: &mut S) -> Result<(), S::Error> {
-        self.0.encode(e)
+impl Serialize for Id {
+    fn serialize<S: Serializer>(&self, e: S) -> Result<S::Ok, S::Error> {
+        self.0.serialize(e)
     }
 }
 
-impl Decodable for Id {
-    fn decode<S: Decoder>(d: &mut S) -> Result<Id, S::Error> {
-        d.read_u32().map(Id)
+impl Deserialize for Id {
+    fn deserialize<S: Deserializer>(d: S) -> Result<Id, S::Error> {
+        Deserialize::deserialize(d).map(Id)
     }
 }
 
@@ -33,7 +33,7 @@ impl fmt::Display for Id {
 }
 
 /// Song place in the queue
-#[derive(Debug, Copy, Clone, PartialEq, Default, RustcEncodable)]
+#[derive(Debug, Copy, Clone, PartialEq, Default, Serialize)]
 pub struct QueuePlace {
     /// song ID
     pub id: Id,
@@ -44,22 +44,12 @@ pub struct QueuePlace {
 }
 
 /// Song range
-#[derive(Debug, Copy, Clone, PartialEq)]
-pub struct Range(pub Duration, pub Option<Duration>);
+#[derive(Debug, Copy, Clone, PartialEq, Serialize)]
+pub struct Range(#[serde(serialize_with="serialize_duration")]
+                 pub Duration,
+                 #[serde(serialize_with="serialize_option_duration")]
+                 pub Option<Duration>);
 
-impl Encodable for Range {
-    fn encode<S: Encoder>(&self, e: &mut S) -> Result<(), S::Error> {
-        e.emit_tuple(2, |e| {
-            e.emit_tuple_arg(0, |e| e.emit_i64(self.0.num_seconds()))?;
-            e.emit_tuple_arg(1, |e| {
-                e.emit_option(|e| match self.1 {
-                    Some(d) => e.emit_option_some(|e| d.num_seconds().encode(e)),
-                    None => e.emit_option_none(),
-                })
-            })
-        })
-    }
-}
 
 impl Default for Range {
     fn default() -> Range {
@@ -91,8 +81,20 @@ impl FromStr for Range {
     }
 }
 
+fn serialize_option_tm<S: Serializer>(time: &Option<Tm>, s: S) -> Result<S::Ok, S::Error> {
+    time.map(|time| time.to_timespec().sec).serialize(s)
+}
+
+fn serialize_duration<S: Serializer>(duration: &Duration, s: S) -> Result<S::Ok, S::Error> {
+    duration.num_seconds().serialize(s)
+}
+
+pub fn serialize_option_duration<S: Serializer>(duration: &Option<Duration>, s: S) -> Result<S::Ok, S::Error> {
+    duration.map(|d| d.num_seconds()).serialize(s)
+}
+
 /// Song data
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq, Default, Serialize)]
 pub struct Song {
     /// filename
     pub file: String,
@@ -101,8 +103,10 @@ pub struct Song {
     /// title
     pub title: Option<String>,
     /// last modification time
+    #[serde(serialize_with="serialize_option_tm")]
     pub last_mod: Option<Tm>,
     /// duration (in seconds resolution)
+    #[serde(serialize_with="serialize_option_duration")]
     pub duration: Option<Duration>,
     /// place in the queue (if queued for playback)
     pub place: Option<QueuePlace>,
@@ -110,32 +114,6 @@ pub struct Song {
     pub range: Option<Range>,
     /// arbitrary tags, like album, artist etc
     pub tags: BTreeMap<String, String>,
-}
-
-impl Encodable for Song {
-    fn encode<S: Encoder>(&self, e: &mut S) -> Result<(), S::Error> {
-        e.emit_struct("Song", 8, |e| {
-            e.emit_struct_field("file", 0, |e| self.file.encode(e))?;
-            e.emit_struct_field("name", 1, |e| self.name.encode(e))?;
-            e.emit_struct_field("title", 2, |e| self.title.encode(e))?;
-            e.emit_struct_field("last_mod", 3, |e| {
-                    e.emit_option(|e| match self.last_mod {
-                        Some(m) => e.emit_option_some(|e| m.to_timespec().sec.encode(e)),
-                        None => e.emit_option_none(),
-                    })
-                })?;
-            e.emit_struct_field("duration", 4, |e| {
-                    e.emit_option(|e| match self.duration {
-                        Some(d) => e.emit_option_some(|e| d.num_seconds().encode(e)),
-                        None => e.emit_option_none(),
-                    })
-                })?;
-            e.emit_struct_field("place", 5, |e| self.place.encode(e))?;
-            e.emit_struct_field("range", 6, |e| self.range.encode(e))?;
-            e.emit_struct_field("tags", 7, |e| self.tags.encode(e))?;
-            Ok(())
-        })
-    }
 }
 
 impl FromIter for Song {

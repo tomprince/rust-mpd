@@ -10,7 +10,8 @@ version = "0.0.11"
 
 [dependencies]
 bufstream = "0.1.1"
-rustc-serialize = "0.3.16"
+serde = "0.9.6"
+serde_derive = "0.9.6"
 time = "0.1.34"
 
 [dev-dependencies]

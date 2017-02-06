@@ -4,7 +4,7 @@ use convert::FromIter;
 use error::Error;
 
 /// Decoder plugin
-#[derive(Clone, Debug, PartialEq, RustcEncodable)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct Plugin {
     /// name
     pub name: String,

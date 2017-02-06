@@ -3,14 +3,20 @@
 use convert::FromIter;
 
 use error::{Error, ParseError};
-use rustc_serialize::{Encodable, Encoder};
+use serde::{Serialize, Serializer};
+use serde::ser::SerializeStruct;
 use song::{Id, QueuePlace};
 use std::fmt;
 use std::str::FromStr;
 use time::Duration;
 
+
+pub fn serialize_option_pair_duration<S: Serializer>(duration: &Option<(Duration, Duration)>, s: S) -> Result<S::Ok, S::Error> {
+    duration.map(|(c, t)| (c.num_seconds(), t.num_seconds())).serialize(s)
+}
+
 /// MPD status
-#[derive(Debug, PartialEq, Clone, Default)]
+#[derive(Debug, PartialEq, Clone, Default, Serialize)]
 pub struct Status {
     /// volume (0-100, or -1 if volume is unavailable (e.g. for HTTPD output type)
     pub volume: i8,
@@ -33,18 +39,23 @@ pub struct Status {
     /// next song to play place in the queue
     pub nextsong: Option<QueuePlace>,
     /// time current song played, and total song duration (in seconds resolution)
+    #[serde(serialize_with="serialize_option_pair_duration")]
     pub time: Option<(Duration, Duration)>,
     /// elapsed play time current song played (in milliseconds resolution)
+    #[serde(serialize_with="::song::serialize_option_duration")]
     pub elapsed: Option<Duration>,
     /// current song duration
+    #[serde(serialize_with="::song::serialize_option_duration")]
     pub duration: Option<Duration>,
     /// current song bitrate, kbps
     pub bitrate: Option<u32>,
     /// crossfade timeout, seconds
+    #[serde(serialize_with="::song::serialize_option_duration")]
     pub crossfade: Option<Duration>,
     /// mixramp threshold, dB
     pub mixrampdb: f32,
     /// mixramp duration, seconds
+    #[serde(serialize_with="::song::serialize_option_duration")]
     pub mixrampdelay: Option<Duration>,
     /// current audio playback format
     pub audio: Option<AudioFormat>,
@@ -54,70 +65,6 @@ pub struct Status {
     pub error: Option<String>,
     /// replay gain mode
     pub replaygain: Option<ReplayGain>,
-}
-
-impl Encodable for Status {
-    fn encode<S: Encoder>(&self, e: &mut S) -> Result<(), S::Error> {
-        e.emit_struct("Status", 21, |e| {
-            e.emit_struct_field("volume", 0, |e| self.volume.encode(e))?;
-            e.emit_struct_field("repeat", 1, |e| self.repeat.encode(e))?;
-            e.emit_struct_field("random", 2, |e| self.random.encode(e))?;
-            e.emit_struct_field("single", 3, |e| self.single.encode(e))?;
-            e.emit_struct_field("consume", 4, |e| self.consume.encode(e))?;
-            e.emit_struct_field("queue_version", 5, |e| self.queue_version.encode(e))?;
-            e.emit_struct_field("queue_len", 6, |e| self.queue_len.encode(e))?;
-            e.emit_struct_field("state", 7, |e| self.state.encode(e))?;
-            e.emit_struct_field("song", 8, |e| self.song.encode(e))?;
-            e.emit_struct_field("nextsong", 9, |e| self.nextsong.encode(e))?;
-            e.emit_struct_field("time", 10, |e| {
-                    e.emit_option(|e| match self.time {
-                        Some(p) => {
-                            e.emit_option_some(|e| {
-                                e.emit_tuple(2, |e| {
-                                    e.emit_tuple_arg(0, |e| p.0.num_seconds().encode(e))?;
-                                    e.emit_tuple_arg(1, |e| p.1.num_seconds().encode(e))?;
-                                    Ok(())
-                                })
-                            })
-                        }
-                        None => e.emit_option_none(),
-                    })
-                })?;
-            e.emit_struct_field("elapsed", 11, |e| {
-                    e.emit_option(|e| match self.elapsed {
-                        Some(d) => e.emit_option_some(|e| d.num_seconds().encode(e)),
-                        None => e.emit_option_none(),
-                    })
-
-                })?;
-            e.emit_struct_field("duration", 12, |e| {
-                    e.emit_option(|e| match self.duration {
-                        Some(d) => e.emit_option_some(|e| d.num_seconds().encode(e)),
-                        None => e.emit_option_none(),
-                    })
-                })?;
-            e.emit_struct_field("bitrate", 13, |e| self.bitrate.encode(e))?;
-            e.emit_struct_field("crossfade", 14, |e| {
-                    e.emit_option(|e| match self.crossfade {
-                        Some(d) => e.emit_option_some(|e| d.num_seconds().encode(e)),
-                        None => e.emit_option_none(),
-                    })
-                })?;
-            e.emit_struct_field("mixrampdb", 15, |e| self.mixrampdb.encode(e))?;
-            e.emit_struct_field("mixrampdelay", 16, |e| {
-                    e.emit_option(|e| match self.mixrampdelay {
-                        Some(d) => e.emit_option_some(|e| d.num_seconds().encode(e)),
-                        None => e.emit_option_none(),
-                    })
-                })?;
-            e.emit_struct_field("audio", 17, |e| self.audio.encode(e))?;
-            e.emit_struct_field("updating_db", 18, |e| self.updating_db.encode(e))?;
-            e.emit_struct_field("error", 19, |e| self.error.encode(e))?;
-            e.emit_struct_field("replaygain", 20, |e| self.replaygain.encode(e))?;
-            Ok(())
-        })
-
-    }
 }
 
 impl FromIter for Status {
@@ -221,7 +168,7 @@ impl FromIter for Status {
 }
 
 /// Audio playback format
-#[derive(Debug, Copy, Clone, PartialEq, RustcEncodable)]
+#[derive(Debug, Copy, Clone, PartialEq, Serialize)]
 pub struct AudioFormat {
     /// sample rate, kbps
     pub rate: u32,
@@ -254,7 +201,7 @@ impl FromStr for AudioFormat {
 }
 
 /// Playback state
-#[derive(Debug, Copy, Clone, PartialEq, RustcEncodable, RustcDecodable)]
+#[derive(Debug, Copy, Clone, PartialEq, Serialize, Deserialize)]
 pub enum State {
     /// player stopped
     Stop,
@@ -283,7 +230,7 @@ impl FromStr for State {
 }
 
 /// Replay gain mode
-#[derive(Debug, Clone, Copy, PartialEq, RustcEncodable, RustcDecodable)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum ReplayGain {
     /// off
     Off,

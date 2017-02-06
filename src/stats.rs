@@ -3,7 +3,7 @@
 use convert::FromIter;
 
 use error::Error;
-use rustc_serialize::{Encodable, Encoder};
+use serde::{Serialize, Serializer};
 use time::{Duration, Timespec};
 
 /// DB and playback statistics
@@ -25,20 +25,6 @@ pub struct Stats {
     pub db_update: Timespec,
 }
 
-impl Encodable for Stats {
-    fn encode<S: Encoder>(&self, e: &mut S) -> Result<(), S::Error> {
-        e.emit_struct("Stats", 7, |e| {
-            e.emit_struct_field("artists", 0, |e| self.artists.encode(e))?;
-            e.emit_struct_field("albums", 1, |e| self.albums.encode(e))?;
-            e.emit_struct_field("songs", 2, |e| self.songs.encode(e))?;
-            e.emit_struct_field("uptime", 3, |e| self.uptime.num_seconds().encode(e))?;
-            e.emit_struct_field("playtime", 4, |e| self.playtime.num_seconds().encode(e))?;
-            e.emit_struct_field("db_playtime", 5, |e| self.db_playtime.num_seconds().encode(e))?;
-            e.emit_struct_field("db_update", 6, |e| self.db_update.sec.encode(e))?;
-            Ok(())
-        })
-    }
-}
 
 impl Default for Stats {
     fn default() -> Stats {

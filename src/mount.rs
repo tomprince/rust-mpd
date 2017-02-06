@@ -15,7 +15,7 @@ use error::{Error, ProtoError};
 use std::collections::BTreeMap;
 
 /// Mount point
-#[derive(Clone, Debug, PartialEq, RustcEncodable)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct Mount {
     /// mount point name
     pub name: String,
@@ -37,7 +37,7 @@ impl FromMap for Mount {
 }
 
 /// Neighbor
-#[derive(Clone, Debug, PartialEq, RustcEncodable)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct Neighbor {
     /// neighbor name
     pub name: String,
